@@ -1,6 +1,6 @@
 # docker-build.ps1
-# Reads versions from each service's gradle.properties, writes <repo>/.env for
-# docker compose, then builds both Docker images.
+# Reads versions from each service's gradle.properties, writes <repo>/compose/.env
+# for docker compose, then builds both Docker images.
 #
 # Run from anywhere: paths are resolved relative to this script's location.
 # Assumes the service repos are checked out as siblings of this deploy repo:
@@ -24,7 +24,7 @@ $orderVersion  = Get-GradleVersion "order-service"
 @"
 CONFIGSERVER_VERSION=$configVersion
 ORDER_SERVICE_VERSION=$orderVersion
-"@ | Set-Content (Join-Path $RepoRoot ".env")
+"@ | Set-Content (Join-Path $RepoRoot "compose/.env")
 
 Write-Host "Versions: configserver=$configVersion  order-service=$orderVersion"
 
