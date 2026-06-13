@@ -1,0 +1,25 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: diningplate-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_DATABASE: diningplate
+    ports:
+      - "3307:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - diningplate-net
+
+volumes:
+  db-data:
+
+networks:
+  diningplate-net:
+    external: true
