@@ -5,6 +5,9 @@ services:
     container_name: configserver
     ports:
       - "8090:8090"
+    environment:
+      CONFIG_GIT_USERNAME: ${CONFIG_GIT_USERNAME:-}
+      CONFIG_GIT_PASSWORD: ${CONFIG_GIT_PASSWORD:-}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8090/actuator/health || exit 1"]
       interval: 10s
