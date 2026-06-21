@@ -4,17 +4,24 @@ Deployment and database artifacts for the DiningPlate platform: Docker image
 builds, Compose stacks, and the database schema/model — decoupled from the
 individual service repos.
 
+> **`deploy.spec` is the source of truth** for the deployment topology (services,
+> ports, versions, image builds, startup order, network). Update it before making
+> changes here.
+
 ## Layout
 
 ```
 diningplate-deploy/
+├── deploy.spec                   # deployment spec — source of truth
 ├── compose/
-│   ├── docker-compose.yml        # configserver + order-service
+│   ├── docker-compose.yml        # configserver + eurekaserver + order-service + gatewayserver
 │   ├── docker-compose.db.yml     # mysql 8.4
 │   ├── .env                      # image tags / creds (generated; git-ignored)
 │   └── .env.example              # template for .env
 ├── scripts/
-│   └── docker-build.ps1          # build service images, generate compose/.env
+│   ├── build-jars.ps1            # assemble each service's jar (gradlew clean assemble)
+│   ├── docker-build.ps1          # build all service images, generate compose/.env
+│   └── build-all.ps1             # pipeline: build-jars.ps1 -> docker-build.ps1
 ├── db/
 │   ├── schema/dining_plate.sql   # full schema (source of truth)
 │   ├── migration/                # incremental change scripts
@@ -29,17 +36,28 @@ The service repos are expected to be checked out as **siblings** of this repo:
 ```
 <workspace>/
 ├── diningplate-deploy/        # this repo
-├── diningplate-configserver/
-└── order-service/
+├── diningplate-configserver/  # 8090
+├── eurekaserver/              # 8091
+├── order-service/            # 8080
+└── gatewayserver/            # 8092
 ```
 
 ## Build images
 
-Reads each service's `version` from its `gradle.properties`, writes
-`compose/.env`, then builds the images:
+Build the service jars and Docker images in one shot (dependency order:
+configserver → eurekaserver → order-service → gatewayserver):
 
 ```powershell
-.\scripts\docker-build.ps1
+.\scripts\build-all.ps1
+```
+
+`build-all.ps1` runs `build-jars.ps1` (each service's `gradlew clean assemble`) then
+`docker-build.ps1` (reads each `gradle.properties` `version`, writes `compose/.env`,
+tags the images). Run the stages on their own if you only need one:
+
+```powershell
+.\scripts\build-jars.ps1     # jars only
+.\scripts\docker-build.ps1   # images from existing jars
 ```
 
 ## Run the stack
