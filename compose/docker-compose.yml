@@ -1,5 +1,53 @@
 services:
 
+  keycloak-db:
+    image: postgres:16
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - diningplate-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION:-26.1}
+    container_name: keycloak
+    command: ["start", "--import-realm"]          # production mode (NOT start-dev)
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+      KC_HOSTNAME: http://localhost:7080           # public frontend URL -> token issuer
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"                      # no TLS on the local compose network
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    ports:
+      - "7080:8080"
+    volumes:
+      - ../keycloak/realm:/opt/keycloak/data/import
+      - ../keycloak/themes/diningplate:/opt/keycloak/themes/diningplate
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - diningplate-net
+
   configserver:
     image: diningplate-configserver:${CONFIGSERVER_VERSION}
     container_name: configserver
@@ -67,8 +115,14 @@ services:
     environment:
       SPRING_CLOUD_CONFIG_URI: http://configserver:8090
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka
+      # JWKS fetched over the internal network; issuer claim validated against the
+      # public URL the browser/React sees. See gatewayserver SecurityConfig.
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/diningplate/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: http://localhost:7080/realms/diningplate
     depends_on:
       order-service:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8092/actuator/health || exit 1"]
@@ -77,6 +131,9 @@ services:
       retries: 5
     networks:
       - diningplate-net
+
+volumes:
+  keycloak-db-data:
 
 networks:
   diningplate-net:
