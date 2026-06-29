@@ -14,10 +14,13 @@ individual service repos.
 diningplate-deploy/
 ├── deploy.spec                   # deployment spec — source of truth
 ├── compose/
-│   ├── docker-compose.yml        # configserver + eurekaserver + order-service + gatewayserver
+│   ├── docker-compose.yml        # keycloak(+db) + configserver + eurekaserver + order-service + gatewayserver
 │   ├── docker-compose.db.yml     # mysql 8.4
 │   ├── .env                      # image tags / creds (generated; git-ignored)
 │   └── .env.example              # template for .env
+├── keycloak/
+│   ├── realm/diningplate-realm.json  # realm, roles, clients, seed users (imported on start)
+│   └── themes/diningplate/           # branded login / registration pages
 ├── scripts/
 │   ├── build-jars.ps1            # assemble each service's jar (gradlew clean assemble)
 │   ├── docker-build.ps1          # build all service images, generate compose/.env
@@ -76,8 +79,44 @@ docker network create diningplate-net
 # database
 docker compose -f compose/docker-compose.db.yml up -d
 
-# services
+# services (includes keycloak + keycloak-db; brought up in dependency order)
 docker compose -f compose/docker-compose.yml up -d
+```
+
+> **Push the config repo first.** The gateway pulls its resource-server settings
+> (`jwk-set-uri`, issuer, CORS) from `diningplate-config/gatewayserver.yaml`, which the
+> config server clones from GitHub on start. Commit and push that file before bringing
+> the stack up, or the gateway won't load the security config.
+
+## Security / identity (Keycloak)
+
+The gateway is an **OAuth2 Resource Server**: every route under
+`/diningplate/order-service/**` requires a valid Bearer JWT from the `diningplate`
+realm, and access is enforced per route by realm role (`CUSTOMER`, `KITCHEN`,
+`DELIVERY`, `ADMIN`). `/actuator/**` stays public.
+
+- **Keycloak** runs in production mode (`start --import-realm`) on host **7080**
+  (container 8080), backed by a dedicated **Postgres** (`keycloak-db`). Admin console:
+  `http://localhost:7080/admin` (default `admin`/`admin` — override via `.env`).
+- The realm, roles, the public PKCE client `diningplate-web`, and one **dev user per
+  role** (`<role>1@diningplate.test` / `Password123`) are imported from
+  `keycloak/realm/diningplate-realm.json`. Import happens only against an empty DB —
+  to re-import after edits, recreate the `keycloak-db-data` volume
+  (`docker compose -f compose/docker-compose.yml down -v keycloak-db`).
+- Login / registration use Keycloak-hosted pages branded by
+  `keycloak/themes/diningplate`. Customers self-register (auto-assigned `CUSTOMER`);
+  staff are admin-provisioned via the console.
+
+Fetch a token and call the gateway:
+
+```powershell
+$token = (Invoke-RestMethod -Method Post `
+  -Uri http://localhost:7080/realms/diningplate/protocol/openid-connect/token `
+  -Body @{ grant_type='password'; client_id='diningplate-web';
+           username='admin1@diningplate.test'; password='Password123' }).access_token
+
+Invoke-RestMethod -Uri http://localhost:8092/diningplate/order-service/api/v1/menu `
+  -Headers @{ Authorization = "Bearer $token" }
 ```
 
 ## Database
