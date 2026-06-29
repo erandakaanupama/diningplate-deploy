@@ -1,0 +1,56 @@
+/* DiningPlate brand overrides for the Keycloak login/register pages. */
+
+:root {
+  --dp-primary: #e8552d;        /* DiningPlate orange */
+  --dp-primary-dark: #c8431f;
+  --dp-bg: #fff7f3;
+  --dp-text: #2b2b2b;
+}
+
+/* Page background. */
+body.login-pf,
+.login-pf body {
+  background: var(--dp-bg);
+}
+
+/* Login card. */
+.login-pf-page .card-pf,
+#kc-form-wrapper,
+.pf-c-login__main {
+  border-top: 4px solid var(--dp-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Brand header / logo area. */
+#kc-header-wrapper,
+.pf-c-login__main-header {
+  color: var(--dp-primary);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Primary buttons (Sign in / Register). */
+.btn-primary,
+.pf-c-button.pf-m-primary {
+  background-color: var(--dp-primary);
+  border-color: var(--dp-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.pf-c-button.pf-m-primary:hover,
+.pf-c-button.pf-m-primary:focus {
+  background-color: var(--dp-primary-dark);
+  border-color: var(--dp-primary-dark);
+}
+
+/* Links (Register / Forgot password). */
+a,
+.pf-c-login__main-footer-band a {
+  color: var(--dp-primary);
+}
+
+a:hover {
+  color: var(--dp-primary-dark);
+}

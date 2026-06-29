@@ -1,0 +1,99 @@
+{
+  "realm": "diningplate",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "passwordPolicy": "length(8) and notUsername",
+  "loginTheme": "diningplate",
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      { "name": "CUSTOMER", "description": "Food delivery customer" },
+      { "name": "KITCHEN", "description": "Kitchen / restaurant staff" },
+      { "name": "DELIVERY", "description": "Delivery rider" },
+      { "name": "ADMIN", "description": "Platform administrator" }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-diningplate",
+    "description": "${role_default-roles}",
+    "composite": true,
+    "clientRole": false,
+    "composites": {
+      "realm": ["offline_access", "uma_authorization", "CUSTOMER"],
+      "client": {
+        "account": ["view-profile", "manage-account"]
+      }
+    }
+  },
+  "clients": [
+    {
+      "clientId": "diningplate-web",
+      "name": "DiningPlate Web (React SPA)",
+      "description": "Public SPA client using Authorization Code + PKCE.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "fullScopeAllowed": true,
+      "redirectUris": ["http://localhost:5173/*", "https://oauth.pstmn.io/v1/callback"],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "customer1@diningplate.test",
+      "email": "customer1@diningplate.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Casey",
+      "lastName": "Customer",
+      "credentials": [{ "type": "password", "value": "Password123", "temporary": false }],
+      "realmRoles": ["CUSTOMER"]
+    },
+    {
+      "username": "kitchen1@diningplate.test",
+      "email": "kitchen1@diningplate.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Kim",
+      "lastName": "Kitchen",
+      "credentials": [{ "type": "password", "value": "Password123", "temporary": false }],
+      "realmRoles": ["KITCHEN"]
+    },
+    {
+      "username": "delivery1@diningplate.test",
+      "email": "delivery1@diningplate.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Dana",
+      "lastName": "Delivery",
+      "credentials": [{ "type": "password", "value": "Password123", "temporary": false }],
+      "realmRoles": ["DELIVERY"]
+    },
+    {
+      "username": "admin1@diningplate.test",
+      "email": "admin1@diningplate.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Avery",
+      "lastName": "Admin",
+      "credentials": [{ "type": "password", "value": "Password123", "temporary": false }],
+      "realmRoles": ["ADMIN"]
+    }
+  ]
+}
